@@ -1,5 +1,5 @@
 
-step: train  # train or test
+step: test  # train or test
 
 data:
   dataset_id: 349  # OULAD UCI repository ID  

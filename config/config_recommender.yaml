@@ -1,0 +1,220 @@
+# add config of recommender here
+# Recommender System Configuration
+
+embeddings:
+  # Embedding model to use
+  model_type: 'sentence_transformer'  # Options: 'sentence_transformer', 'tfidf', 'onehot'
+  
+  # Sentence Transformer settings
+  sentence_transformer:
+    model_name: 'all-MiniLM-L6-v2'  # Options: 'all-MiniLM-L6-v2', 'all-mpnet-base-v2'
+    device: 'cpu'                    # Use CPU (no GPU needed)
+    batch_size: 32                   # Batch size for encoding
+  
+  # Embedding dimensions
+  text_dim: 384        # From sentence transformer (all-MiniLM-L6-v2)
+  numerical_dim: 10    # Number of numerical features
+  total_dim: 394       # text_dim + numerical_dim
+  
+  # Storage backend
+  storage_backend: 'faiss'  # Options: 'faiss', 'numpy', 'pkl'
+  
+  # FAISS settings
+  faiss:
+    index_type: 'IndexFlatIP'  # Inner Product (cosine similarity)
+    # Options: 'IndexFlatIP' (exact, cosine), 'IndexFlatL2' (exact, euclidean)
+    normalize_vectors: true     # Normalize for cosine similarity
+  
+  # File paths
+  index_path: 'embeddings/course_vectors.faiss'
+  metadata_path: 'embeddings/course_metadata.parquet'
+  mapping_path: 'embeddings/index_mapping.json'
+  
+  force_recompute: false  # Set true to regenerate embeddings
+ 
+# ============================================================================
+# COURSE FEATURES
+# ============================================================================
+course_features:
+  # Which features to compute and include
+  include:
+    - 'num_students'           # Total enrolled students
+    - 'dropout_rate'           # % of students who withdrew
+    - 'avg_score'              # Average assessment score
+    - 'avg_clicks'             # Average VLE clicks per student
+    - 'duration_days'          # Course length in days
+    - 'num_assessments'        # Number of assessments
+    - 'num_resources'          # Number of VLE resources
+    - 'pct_female'             # % female students
+    - 'avg_age'                # Average student age
+    - 'difficulty_score'       # Inferred difficulty (0-1)
+  
+  # Difficulty inference method
+  difficulty:
+    method: 'composite'  # Based on dropout_rate + avg_score
+    weights:
+      dropout_rate: 0.6  # Higher dropout = harder
+      avg_score: 0.4     # Lower score = harder
+  
+  # Normalization
+  normalization: 'minmax'  # Options: 'minmax', 'standard', 'none'
+ 
+# ============================================================================
+# CONTENT-BASED RECOMMENDER
+# ============================================================================
+recommender:
+  # Similarity metric
+  similarity_metric: 'cosine'  # Options: 'cosine', 'euclidean', 'dot_product'
+  
+  # Number of candidates to retrieve
+  top_k_candidates: 50
+  
+  # Final recommendations
+  top_k_final: 10
+  
+  # Student profile creation
+  student_profile:
+    method: 'weighted_average'  # Options: 'weighted_average', 'last_n', 'tfidf'
+    window_days: 21             # Use Week 1-3 data (21 days)
+    weight_by: 'clicks'          # Weight by click count
+    min_interactions: 3          # Minimum interactions to create profile
+  
+  # Cold start handling
+  cold_start:
+    method: 'popularity'  # Options: 'popularity', 'random', 'demographic'
+    fallback_k: 10
+ 
+# ============================================================================
+# CHURN-AWARE RE-RANKING
+# ============================================================================
+reranking:
+  # Enable churn-aware re-ranking
+  enabled: true
+  
+  # Risk thresholds
+  risk_thresholds:
+    low: 0.30      # P(dropout) < 0.30
+    high: 0.60     # P(dropout) >= 0.60
+  
+  # Scoring weights (alpha parameter)
+  # final_score = alpha * similarity + (1-alpha) * engagement
+  alpha:
+    low: 1.0       # 100% similarity, 0% engagement
+    medium: 0.6    # 60% similarity, 40% engagement
+    high: 0.3      # 30% similarity, 70% engagement
+  
+  # High-risk content filtering
+  high_risk_filter:
+    enabled: true
+    criteria:
+      max_difficulty: 0.7      # Only courses with difficulty <= 0.7
+      max_duration_days: 200   # Shorter courses preferred
+      min_engagement_score: 0.5  # Only proven engaging content
+  
+  # Engagement score calculation
+  engagement:
+    method: 'retention_rate'  # Options: 'retention_rate', 'composite'
+    min_sample_size: 5        # Minimum students to compute score
+    default_score: 0.5        # Default if insufficient data
+    
+    # Composite method weights (if used)
+    composite_weights:
+      retention_rate: 0.5      # Did at-risk students stay?
+      avg_clicks: 0.3          # How much they engaged
+      completion_rate: 0.2     # Did they complete?
+ 
+# ============================================================================
+# DATA PATHS
+# ============================================================================
+data:
+  # OULAD dataset paths
+  courses: 'data/courses.csv'
+  student_info: 'data/studentInfo.csv'
+  student_vle: 'data/studentVle.csv'
+  student_assessment: 'data/studentAssessment.csv'
+  assessments: 'data/assessments.csv'
+  vle: 'data/vle.csv'
+  
+  # Processed data cache
+  cache_dir: 'cache/'
+ 
+# ============================================================================
+# EVALUATION
+# ============================================================================
+evaluation:
+  # Train/test split
+  temporal_split:
+    train_presentations: ['2013B', '2013J', '2014B']
+    test_presentations: ['2014J']
+  
+  # Prediction window
+  prediction_window: 28  # Week 4 (day 28)
+  
+  # Evaluation window
+  evaluation_window:
+    start: 29   # Week 5 start
+    end: 56     # Week 8 end
+  
+  # Metrics to compute
+  metrics:
+    - 'precision@10'
+    - 'recall@10'
+    - 'ndcg@10'
+    - 'engagement_lift'
+    - 'retention_improvement'
+  
+  # Stratification
+  stratify_by_risk: true  # Evaluate separately for low/medium/high risk
+ 
+# ============================================================================
+# CHURN MODEL INTEGRATION
+# ============================================================================
+churn_model:
+  # Path to trained churn model
+  model_path: 'models/churn_model.pkl'
+  
+  # Config for churn prediction
+  config_path: 'config/config_churn.yaml'
+  
+  # Use cached predictions (faster)
+  use_cache: true
+  cache_path: 'cache/churn_predictions.pkl'
+ 
+# ============================================================================
+# LOGGING & OUTPUT
+# ============================================================================
+logging:
+  level: 'INFO'  # Options: 'DEBUG', 'INFO', 'WARNING', 'ERROR'
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  file: 'logs/recommender.log'
+ 
+output:
+  # Where to save results
+  results_dir: 'results/'
+  
+  # Save recommendations
+  save_recommendations: true
+  recommendations_path: 'results/recommendations.csv'
+  
+  # Save evaluation metrics
+  save_metrics: true
+  metrics_path: 'results/metrics.json'
+  
+  # Save embeddings visualization (optional)
+  save_embedding_viz: false
+  viz_path: 'results/embeddings_viz.png'
+ 
+# ============================================================================
+# EXPERIMENT TRACKING
+# ============================================================================
+experiment:
+  name: 'churn_aware_recsys_v1'
+  description: 'Content-based recommender with churn-aware re-ranking on OULAD'
+  tags:
+    - 'content-based'
+    - 'churn-aware'
+    - 'oulad'
+    - 'sentence-transformers'
+  
+  # Random seed for reproducibility
+  random_seed: 42

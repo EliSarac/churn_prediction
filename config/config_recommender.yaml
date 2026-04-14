@@ -8,8 +8,8 @@ embeddings:
   # Sentence Transformer settings
   sentence_transformer:
     model_name: 'all-MiniLM-L6-v2'  # Options: 'all-MiniLM-L6-v2', 'all-mpnet-base-v2'
-    device: 'cpu'                    # Use CPU (no GPU needed)
-    batch_size: 32                   # Batch size for encoding
+    device: 'cpu'                    
+    batch_size: 32                   
   
   # Embedding dimensions
   text_dim: 384        # From sentence transformer (all-MiniLM-L6-v2)
@@ -17,7 +17,7 @@ embeddings:
   total_dim: 394       # text_dim + numerical_dim
   
   # Storage backend
-  storage_backend: 'faiss'  # Options: 'faiss', 'numpy', 'pkl'
+  storage_backend: 'faiss'  
   
   # FAISS settings
   faiss:
@@ -47,7 +47,7 @@ course_features:
     - 'num_resources'          # Number of VLE resources
     - 'pct_female'             # % female students
     - 'avg_age'                # Average student age
-    - 'difficulty_score'       # Inferred difficulty (0-1)
+    - 'avg_dropout_day'       # Inferred difficulty (0-1)
   
   # Difficulty inference method
   difficulty:

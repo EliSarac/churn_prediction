@@ -40,11 +40,10 @@ class CourseFeatureEngineer:
             )
             if features:
                 course_features.append(features)
-        df = pd.DataFrame(course_features)
-        return df
+        
+        return pd.DataFrame(course_features)
     
-    def _compute_course_features(self, course, student_info, student_vle,
-                                 student_assessment, assessments, student_registration):
+    def _compute_course_features(self, course, student_info, student_vle, student_assessment, assessments, student_registration):
         """Compute all features for a single course"""
         code_module = course['code_module']
         code_presentation = course['code_presentation']
@@ -68,20 +67,10 @@ class CourseFeatureEngineer:
         features.update(self._compute_student_features(course_students))
         
         # VLE engagement
-        features.update(self._compute_vle_features(
-            code_module, code_presentation, student_vle
-        ))
+        features.update(self._compute_vle_features(code_module, code_presentation, student_vle))
         
         # Assessment performance
-        features.update(self._compute_assessment_features(
-            code_module, code_presentation, student_assessment, assessments
-        ))
-        
-        # Derived features
-        features['difficulty_score'] = self._calculate_difficulty(
-            features['dropout_rate'],
-            features['avg_score']
-        )
+        features.update(self._compute_assessment_features(code_module, code_presentation, student_assessment, assessments))
         
         return features
     
